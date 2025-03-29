@@ -6,20 +6,26 @@ using UnityEngine.Networking;
 namespace ScriptGenerator {
 static class DeepSeekAPI {
     
-
+// Disables warning CS0649: "Field is never assigned to, and will always have its default value null".
+// This is used because the structs are populated via JSON deserialization, not direct assignment.
 #pragma warning disable 0649
+    // Struct representing the request payload sent to the DeepSeek API.
     [Serializable]
     public struct Request {
         public string model;
         public RequestMessage[] messages;
     }
 
+    // Struct representing a single message in the request
     [Serializable]
     public struct RequestMessage {
+        // Role of the message sender (e.g., "user").
         public string role;
+        // The content of the message (e.g., the user’s prompt).
         public string content;
     }
 
+    // Struct representing the response payload received from the DeepSeek API.
     [Serializable]
     public struct Response {
         public string id;
@@ -39,17 +45,24 @@ static class DeepSeekAPI {
     }
 #pragma warning restore 0649
 
+    // Submits a prompt to the DeepSeek API and returns the generated response content.
     public static string Submit(string prompt) {
+        // Retrieves the singleton instance of settings for API configuration.
         var settings = ScriptGeneratorSettings.instance;
+        // Creates a request object with the specified model and a single user message containing the prompt.
         var request = new Request {
             model = settings.model, messages = new[] { new RequestMessage() { role = "user", content = prompt } }
         };
-
+        
+        // Serializes the request struct to JSON format for the API request.
         var requestJson = JsonUtility.ToJson(request);
 
+// Configures the UnityWebRequest based on Unity version for compatibility.
 #if UNITY_2022_2_OR_NEWER
+        // Uses the newer, simpler Post method signature in Unity 2022.2+.
         using var post = UnityWebRequest.Post(settings.Url, requestJson, "application/json");
 #else
+        // Uses the older, manual configuration for Unity versions before 2022.2.
         using var post = new UnityWebRequest(settings.Url, "POST");
         post.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(requestJson));
         post.downloadHandler = new DownloadHandlerBuffer();
